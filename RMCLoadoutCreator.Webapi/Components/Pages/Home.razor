@@ -1,7 +1,48 @@
 ﻿@page "/"
+@using RMCLoadoutCreator.Definitions.Models
+@inject HttpClient Http
+@inject IConfiguration Configuration
 
-<PageTitle>Home</PageTitle>
+<PageTitle>RMC Loadout Creator</PageTitle>
 
-<h1>Hello, world!</h1>
+<h1>RMC Loadout Creator</h1>
 
-Welcome to your new app.
+<p>Welcome to the RMC Loadout Creator application.</p>
+
+<h3>Available Roles</h3>
+
+@if (roles == null)
+{
+    <p><em>Loading roles...</em></p>
+}
+else if (roles.Length == 0)
+{
+    <p><em>No roles found.</em></p>
+}
+else
+{
+    <ul>
+        @foreach (var role in roles)
+        {
+            <li>@role.Name</li>
+        }
+    </ul>
+}
+
+@code {
+    private Role[]? roles;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var baseUrl = Configuration.GetValue<string>("BaseUrl") ?? "https://localhost:5122";
+            roles = await Http.GetFromJsonAsync<Role[]>($"{baseUrl}/api/roles");
+        }
+        catch (Exception ex)
+        {
+            // Handle error - could log or show error message
+            roles = Array.Empty<Role>();
+        }
+    }
+}

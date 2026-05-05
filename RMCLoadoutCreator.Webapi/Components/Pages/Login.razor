@@ -1,0 +1,111 @@
+@page "/account/login"
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<IdentityUser> SignInManager
+@inject UserManager<IdentityUser> UserManager
+@inject NavigationManager Navigation
+
+<PageTitle>Login</PageTitle>
+
+<div class="row justify-content-center">
+    <div class="col-md-4">
+        <h2>Login</h2>
+        
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger" role="alert">
+                @errorMessage
+            </div>
+        }
+
+        <EditForm Model="loginModel" OnValidSubmit="HandleLogin" FormName="login">
+            <DataAnnotationsValidator />
+            
+            <div class="mb-3">
+                <label for="email" class="form-label">Email</label>
+                <InputText @bind-Value="loginModel.Email" class="form-control" id="email" />
+                <ValidationMessage For="@(() => loginModel.Email)" />
+            </div>
+            
+            <div class="mb-3">
+                <label for="password" class="form-label">Password</label>
+                <InputText @bind-Value="loginModel.Password" type="password" class="form-control" id="password" />
+                <ValidationMessage For="@(() => loginModel.Password)" />
+            </div>
+            
+            <div class="mb-3 form-check">
+                <InputCheckbox @bind-Value="loginModel.RememberMe" class="form-check-input" id="rememberMe" />
+                <label class="form-check-label" for="rememberMe">Remember me</label>
+            </div>
+            
+            <button type="submit" class="btn btn-primary" disabled="@isLoading">
+                @if (isLoading)
+                {
+                    <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                }
+                Login
+            </button>
+        </EditForm>
+        
+        <div class="mt-3">
+            <p>Don't have an account? <a href="/account/register">Register here</a></p>
+        </div>
+    </div>
+</div>
+
+@code {
+    private LoginModel loginModel = new();
+    private string errorMessage = "";
+    private bool isLoading = false;
+
+    public class LoginModel
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = "";
+        
+        [Required]
+        public string Password { get; set; } = "";
+        
+        public bool RememberMe { get; set; }
+    }
+
+    private async Task HandleLogin()
+    {
+        isLoading = true;
+        errorMessage = "";
+        
+        try
+        {
+            var result = await SignInManager.PasswordSignInAsync(
+                loginModel.Email, 
+                loginModel.Password, 
+                loginModel.RememberMe, 
+                lockoutOnFailure: true);
+
+            if (result.Succeeded)
+            {
+                Navigation.NavigateTo("/");
+            }
+            else if (result.IsLockedOut)
+            {
+                errorMessage = "Account is locked out. Please try again later.";
+            }
+            else if (result.RequiresTwoFactor)
+            {
+                errorMessage = "Two-factor authentication required.";
+            }
+            else
+            {
+                errorMessage = "Invalid email or password.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "An error occurred during login. Please try again.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

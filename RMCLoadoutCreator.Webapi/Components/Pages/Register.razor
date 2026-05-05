@@ -1,0 +1,106 @@
+@page "/account/register"
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<IdentityUser> SignInManager
+@inject UserManager<IdentityUser> UserManager
+@inject NavigationManager Navigation
+
+<PageTitle>Register</PageTitle>
+
+<div class="row justify-content-center">
+    <div class="col-md-4">
+        <h2>Register</h2>
+        
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger" role="alert">
+                @errorMessage
+            </div>
+        }
+
+        <EditForm Model="registerModel" OnValidSubmit="HandleRegister" FormName="register">
+            <DataAnnotationsValidator />
+            
+            <div class="mb-3">
+                <label for="email" class="form-label">Email</label>
+                <InputText @bind-Value="registerModel.Email" class="form-control" id="email" />
+                <ValidationMessage For="@(() => registerModel.Email)" />
+            </div>
+            
+            <div class="mb-3">
+                <label for="password" class="form-label">Password</label>
+                <InputText @bind-Value="registerModel.Password" type="password" class="form-control" id="password" />
+                <ValidationMessage For="@(() => registerModel.Password)" />
+                <div class="form-text">Password must be at least 6 characters and contain a digit.</div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="confirmPassword" class="form-label">Confirm Password</label>
+                <InputText @bind-Value="registerModel.ConfirmPassword" type="password" class="form-control" id="confirmPassword" />
+                <ValidationMessage For="@(() => registerModel.ConfirmPassword)" />
+            </div>
+            
+            <button type="submit" class="btn btn-primary" disabled="@isLoading">
+                @if (isLoading)
+                {
+                    <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                }
+                Register
+            </button>
+        </EditForm>
+        
+        <div class="mt-3">
+            <p>Already have an account? <a href="/account/login">Login here</a></p>
+        </div>
+    </div>
+</div>
+
+@code {
+    private RegisterModel registerModel = new();
+    private string errorMessage = "";
+    private bool isLoading = false;
+
+    public class RegisterModel
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = "";
+        
+        [Required]
+        [MinLength(6)]
+        public string Password { get; set; } = "";
+        
+        [Required]
+        [Compare(nameof(Password), ErrorMessage = "The password and confirmation password do not match.")]
+        public string ConfirmPassword { get; set; } = "";
+    }
+
+    private async Task HandleRegister()
+    {
+        isLoading = true;
+        errorMessage = "";
+        
+        try
+        {
+            var user = new IdentityUser { UserName = registerModel.Email, Email = registerModel.Email };
+            var result = await UserManager.CreateAsync(user, registerModel.Password);
+
+            if (result.Succeeded)
+            {
+                await SignInManager.SignInAsync(user, isPersistent: false);
+                Navigation.NavigateTo("/");
+            }
+            else
+            {
+                errorMessage = string.Join(", ", result.Errors.Select(e => e.Description));
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "An error occurred during registration. Please try again.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}
